@@ -7,12 +7,10 @@ const nconf = require('nconf');
 
 nconf.argv();
 
-console.info("sThreshold: nconf.get('sThreshold')", typeof nconf.get('sThreshold')); // @test
-
 // @todo bus these up to command line args
 var settings = {
   amount: nconf.get('amount') || 1000,
-  percentage: nconf.get('percentage') || true,
+  percentage: nconf.get('percentage') === 'false' ? false : true,
   // percentage of amount or static amount depending on `percentage`
   bpg: typeof nconf.get('bpg') === 'number' ? nconf.get('bpg') : 50,
   hpg: nconf.get('hpg') || 0,
@@ -35,7 +33,6 @@ var biggestS = 0;
 // get file names
 fs.readdir(settings.dataDirectory, function(error, fileNames) {
   async.eachSeries(fileNames, function(fileName, callback) {
-    console.info("settings.dataDirectory", settings.dataDirectory); // @test
     var lineReader = readLine.createInterface({
       input: fs.createReadStream(`${settings.dataDirectory}/${fileName}`)
     });
@@ -43,8 +40,6 @@ fs.readdir(settings.dataDirectory, function(error, fileNames) {
     var lastLine;
     lineReader.on('line', function (line) {
       if (lineIndex && lineIndex % 1 === 0) {
-        console.info("lastLine", lastLine); // @test
-        console.info("line", line); // @test
         totalG++;
         // g = lastLine vs line
         let t0 = lastLine.split(',');
@@ -52,7 +47,11 @@ fs.readdir(settings.dataDirectory, function(error, fileNames) {
         if (settings.amount <= 0) {
           throw Error('out');
         }
-        let r = settings.amount * (settings.bpg * .01);
+        // static vs percentage
+        let r = settings.bpg;
+        if (settings.percentage) {
+          r = settings.amount * (settings.bpg * .01);
+        }
         let t0ml = parseInt10(t0[5]);
         let t1ml = parseInt10(t1[5]);
         let s = Math.abs(t0ml) + Math.abs(t1ml);
@@ -65,7 +64,11 @@ fs.readdir(settings.dataDirectory, function(error, fileNames) {
         } else {
           gp++;
         }
-        let h = settings.amount * (settings.hpg * .01);
+        // static vs percentage
+        let h = settings.hpg;
+        if (settings.percentage) {
+          h = settings.amount * (settings.hpg * .01);
+        }
         // results
         // skip ones with no ML
         if (t0[5] !== 'NL') {
@@ -103,5 +106,5 @@ fs.readdir(settings.dataDirectory, function(error, fileNames) {
 });
 
 function parseInt10(input) {
-  return parseInt10(input);
+  return parseInt(input, 10);
 }
