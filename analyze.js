@@ -21,10 +21,10 @@ var settings = {
 };
 
 // @todo write tests to validate the logic,
-// @todo try proportional betting based on s, higher the s, higher the bet
-// @todo do this over all seasons
-// @todo try with static bet amounts instead of percentage of amount
-// @todo calculate odds accuracy on each season
+// @todo try proportional Bs based on s, higher the s, higher the B
+// @todo do this over all years
+// @todo try with static B amounts instead of percentage of amount
+// @todo calculate prediction accuracy on each year
 
 var totalG = 0;
 var gp = 0;
@@ -34,7 +34,6 @@ var biggestS = 0;
 
 // get file names
 fs.readdir(settings.dataDirectory, function(error, fileNames) {
-  // get each season stats
   async.eachSeries(fileNames, function(fileName, callback) {
     console.info("settings.dataDirectory", settings.dataDirectory); // @test
     var lineReader = readLine.createInterface({
@@ -47,11 +46,11 @@ fs.readdir(settings.dataDirectory, function(error, fileNames) {
         console.info("lastLine", lastLine); // @test
         console.info("line", line); // @test
         totalG++;
-        // game = lastLine vs line
+        // g = lastLine vs line
         let t0 = lastLine.split(',');
         let t1 = line.split(',');
         if (settings.amount <= 0) {
-          throw Error('out of money');
+          throw Error('out');
         }
         let r = settings.amount * (settings.bpg * .01);
         let t0ml = parseInt10(t0[5]);
