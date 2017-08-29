@@ -63,16 +63,17 @@ fs.readdir(settings.dataDirectory, function(error, fileNames) {
         if (s > biggestS) {
           biggestS = s;
         }
-        // s threshold
-        if (s < settings.sThreshold) {
-          r = 0;
-        } else {
-          gp++;
-        }
         // static vs percentage
         let h = settings.hpg;
         if (settings.percentage) {
           h = settings.amount * (settings.hpg * .01);
+        }
+        // s threshold
+        if (s < settings.sThreshold) {
+          r = 0;
+          h = 0;
+        } else {
+          gp++;
         }
         // results
         // skip ones with no ML
@@ -106,6 +107,9 @@ fs.readdir(settings.dataDirectory, function(error, fileNames) {
     lineReader.on('close', callback);
   }, function () {
     settings.amount = settings.amount.toFixed(2);
+    settings.totalG = totalG;
+    settings.gp = gp;
+    settings.gw = gw;
     console.log(settings);
   });
 });
