@@ -8,9 +8,14 @@ const nconf = require('nconf');
 nconf.argv();
 
 // @todo bus these up to command line args
+var percentage = nconf.get('percentage');
+if (typeof percentage === 'string') {
+  percentage = percentage === 'false' ? false : true;
+}
+
 var settings = {
   amount: nconf.get('amount') || 1000,
-  percentage: nconf.get('percentage') === 'false' ? false : true,
+  percentage,
   // percentage of amount or static amount depending on `percentage`
   bpg: typeof nconf.get('bpg') === 'number' ? nconf.get('bpg') : 50,
   hpg: nconf.get('hpg') || 0,
@@ -36,10 +41,10 @@ fs.readdir(settings.dataDirectory, function(error, fileNames) {
     var lineReader = readLine.createInterface({
       input: fs.createReadStream(`${settings.dataDirectory}/${fileName}`)
     });
-    var lineIndex = 0;
+    var lineIndex = 1;
     var lastLine;
     lineReader.on('line', function (line) {
-      if (lineIndex && lineIndex % 1 === 0) {
+      if (lineIndex % 2 === 0) {
         totalG++;
         // g = lastLine vs line
         let t0 = lastLine.split(',');
