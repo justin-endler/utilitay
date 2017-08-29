@@ -23,11 +23,10 @@ var settings = {
   dataDirectory: nconf.get('dataDirectory') || 'data'
 };
 
-// @todo write tests to validate the logic,
 // @todo try proportional Bs based on s, higher the s, higher the B
 // @todo do this over all years
-// @todo try with static B amounts instead of percentage of amount
 // @todo calculate prediction accuracy on each year
+// @todo H if S is low enough
 
 var totalG = 0;
 var gp = 0;
