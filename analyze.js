@@ -13,13 +13,20 @@ if (typeof percentage === 'string') {
   percentage = percentage === 'false' ? false : true;
 }
 
+var proportional = nconf.get('proportional');
+if (typeof proportional === 'string') {
+  proportional = proportional === 'false' ? false : true;
+}
+
 var settings = {
   amount: nconf.get('amount') || 1000,
   percentage,
-  // percentage of amount or static amount depending on `percentage`
+  proportional,
+  // percentage of amount OR static amount
   bpg: typeof nconf.get('bpg') === 'number' ? nconf.get('bpg') : 50,
   hpg: nconf.get('hpg') || 0,
-  sThreshold: typeof nconf.get('sThreshold') === 'number' ? nconf.get('sThreshold') : 6500,
+  bThreshold: typeof nconf.get('bThreshold') === 'number' ? nconf.get('bThreshold') : 6500,
+  hThreshold: typeof nconf.get('hThreshold') === 'number' ? nconf.get('hThreshold') : 1000,
   dataDirectory: nconf.get('dataDirectory') || 'data'
 };
 
@@ -31,8 +38,8 @@ var settings = {
 var totalG = 0;
 var gp = 0;
 var gw = 0;
-
-var biggestS = 0;
+var minS;
+var maxS;
 
 // get file names
 fs.readdir(settings.dataDirectory, function(error, fileNames) {
@@ -51,54 +58,79 @@ fs.readdir(settings.dataDirectory, function(error, fileNames) {
         if (settings.amount <= 0) {
           throw Error('out');
         }
-        // static vs percentage
-        let r = settings.bpg;
-        if (settings.percentage) {
-          r = settings.amount * (settings.bpg * .01);
-        }
         let t0ml = parseInt10(t0[5]);
+        // sometimes the ML value is NaN or missing
+        if (isNaN(t0ml)) {
+          return;
+        }
         let t1ml = parseInt10(t1[5]);
         let s = Math.abs(t0ml) + Math.abs(t1ml);
-        if (s > biggestS) {
-          biggestS = s;
+
+        // update s limits
+        if (settings.proportional) {
+          if (minS === undefined) {
+            minS = s;
+            maxS = s;
+            settings.bpg = 50;
+          } else {
+            if (s < minS) {
+              minS = s;
+            } else if (s > maxS) {
+              maxS = s;
+            }
+            // bpg / 100 = (s - minS) / (maxS - minS)
+            settings.bpg = ((s - minS) / (maxS - minS)) * 100;
+          }
         }
+        // static vs percentage
+        let r = settings.bpg;
+        if (settings.percentage || settings.proportional) {
+          r = settings.amount * (settings.bpg * .01);
+        }
+        // console.info("s", s); // @test
+        // console.info("settings.bpg", settings.bpg); // @test
+        // console.info("r", r); // @test
+        // console.info("settings.amount pre", settings.amount); // @test
+
         // static vs percentage
         let h = settings.hpg;
         if (settings.percentage) {
           h = settings.amount * (settings.hpg * .01);
         }
-        // s threshold
-        if (s < settings.sThreshold) {
+        // b threshold
+        if (s < settings.bThreshold) {
           r = 0;
-          h = 0;
         } else {
           gp++;
         }
+        // h threshold
+        if (s >= settings.hThreshold) {
+          h = 0;
+        }
         // results
-        // skip ones with no ML
-        if (t0[5] !== 'NL') {
-          let fav = t0ml <= 0 ? t0 : t1;
-          let other = t0ml > 0 ? t0 : t1;
-          // W case
-          if (parseInt10(fav[2]) > parseInt10(other[2])) {
-            let t = r / (Math.abs(parseInt10(fav[5]))/100);
-            // t
-            settings.amount += t;
-            // L
-            settings.amount -= h;
-            // count the W
-            if (r > 0) {
-              gw++;
-            }
-          }
-          // L or T case
-          else {
-            // t
-            settings.amount += h * (parseInt10(other[5]) / 100);
-            // L
-            settings.amount -= r;
+        let fav = t0ml <= 0 ? t0 : t1;
+        let other = t0ml > 0 ? t0 : t1;
+        // W case
+        if (parseInt10(fav[2]) > parseInt10(other[2])) {
+          let t = r / (Math.abs(parseInt10(fav[5]))/100);
+          // t
+          settings.amount += t;
+          // L
+          settings.amount -= h;
+          // count the W
+          if (r > 0) {
+            gw++;
           }
         }
+        // L or T case
+        else {
+          // t
+          settings.amount += h * (parseInt10(other[5]) / 100);
+          // L
+          settings.amount -= r;
+        }
+        // console.info("settings.amount post", settings.amount); // @test
+        // console.log(""); // @test
       }
       lineIndex++;
       lastLine = line;
