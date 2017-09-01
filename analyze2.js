@@ -1,4 +1,10 @@
 'use strict';
+
+/*
+Percentage only
+No proportional
+*/
+
 const fs = require('fs');
 const readLine = require('readline');
 const async = require('async');
@@ -7,22 +13,8 @@ const nconf = require('nconf');
 
 nconf.argv();
 
-// @todo bus these up to command line args
-var percentage = nconf.get('percentage');
-if (typeof percentage === 'string') {
-  percentage = percentage === 'false' ? false : true;
-}
-
-var proportional = nconf.get('proportional');
-if (typeof proportional === 'string') {
-  proportional = proportional === 'true' ? true : false;
-}
-
 var settings = {
   amount: nconf.get('amount') || 1000,
-  percentage,
-  proportional,
-  // percentage of amount OR static amount
   bpg: typeof nconf.get('bpg') === 'number' ? nconf.get('bpg') : 50,
   hpg: nconf.get('hpg') || 0,
   bThreshold: typeof nconf.get('bThreshold') === 'number' ? nconf.get('bThreshold') : 6500,
@@ -30,9 +22,7 @@ var settings = {
   dataDirectory: nconf.get('dataDirectory') || 'data'
 };
 
-// @todo more test validation, added proportional and H
 // @todo calculate prediction accuracy on each year
-// @todo put V vs H back into data. H H underdogs when S is low
 // @todo try similar logic to current but only paying attention to negative ML, not the entire S
 
 var totalG = 0;
@@ -65,34 +55,9 @@ fs.readdir(settings.dataDirectory, function(error, fileNames) {
         }
         let t1ml = parseInt10(t1[6]);
         let s = Math.abs(t0ml) + Math.abs(t1ml);
+        let r = settings.amount * (settings.bpg * .01);
+        let h = settings.amount * (settings.hpg * .01);
 
-        // update s limits
-        if (settings.proportional) {
-          if (minS === undefined) {
-            minS = s;
-            maxS = s;
-            settings.bpg = 50;
-          } else {
-            if (s < minS) {
-              minS = s;
-            } else if (s > maxS) {
-              maxS = s;
-            }
-            // bpg / 100 = (s - minS) / (maxS - minS)
-            settings.bpg = ((s - minS) / (maxS - minS)) * 100;
-          }
-        }
-        // static vs percentage
-        let r = settings.bpg;
-        if (settings.percentage || settings.proportional) {
-          r = settings.amount * (settings.bpg * .01);
-        }
-
-        // static vs percentage
-        let h = settings.hpg;
-        if (settings.percentage) {
-          h = settings.amount * (settings.hpg * .01);
-        }
         // b threshold
         if (s < settings.bThreshold) {
           r = 0;
