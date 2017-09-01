@@ -15,7 +15,7 @@ if (typeof percentage === 'string') {
 
 var proportional = nconf.get('proportional');
 if (typeof proportional === 'string') {
-  proportional = proportional === 'false' ? false : true;
+  proportional = proportional === 'true' ? true : false;
 }
 
 var settings = {
@@ -30,10 +30,10 @@ var settings = {
   dataDirectory: nconf.get('dataDirectory') || 'data'
 };
 
-// @todo try proportional Bs based on s, higher the s, higher the B
-// @todo do this over all years
+// @todo more test validation, added proportional and H
 // @todo calculate prediction accuracy on each year
-// @todo H if S is low enough
+// @todo put V vs H back into data. H H underdogs when S is low
+// @todo try similar logic to current but only paying attention to negative ML, not the entire S
 
 var totalG = 0;
 var gp = 0;
@@ -56,7 +56,7 @@ fs.readdir(settings.dataDirectory, function(error, fileNames) {
         let t0 = lastLine.split(',');
         let t1 = line.split(',');
         if (settings.amount <= 0) {
-          throw Error('out');
+          return;
         }
         let t0ml = parseInt10(t0[5]);
         // sometimes the ML value is NaN or missing
@@ -87,10 +87,6 @@ fs.readdir(settings.dataDirectory, function(error, fileNames) {
         if (settings.percentage || settings.proportional) {
           r = settings.amount * (settings.bpg * .01);
         }
-        // console.info("s", s); // @test
-        // console.info("settings.bpg", settings.bpg); // @test
-        // console.info("r", r); // @test
-        // console.info("settings.amount pre", settings.amount); // @test
 
         // static vs percentage
         let h = settings.hpg;
@@ -129,8 +125,6 @@ fs.readdir(settings.dataDirectory, function(error, fileNames) {
           // L
           settings.amount -= r;
         }
-        // console.info("settings.amount post", settings.amount); // @test
-        // console.log(""); // @test
       }
       lineIndex++;
       lastLine = line;
