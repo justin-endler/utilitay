@@ -3,6 +3,7 @@
 /*
 Percentage only
 No proportional
+Only H if O is at H
 */
 
 const fs = require('fs');
@@ -30,6 +31,8 @@ var gp = 0;
 var gw = 0;
 var minS;
 var maxS;
+var ohgp = 0;
+var ohgw = 0;
 
 // get file names
 fs.readdir(settings.dataDirectory, function(error, fileNames) {
@@ -71,8 +74,17 @@ fs.readdir(settings.dataDirectory, function(error, fileNames) {
         // results
         let fav = t0ml <= 0 ? t0 : t1;
         let other = t0ml > 0 ? t0 : t1;
+        let favT = parseInt10(fav[3]);
+        let otherT = parseInt10(other[3]);
+        let oH = other[2] === 'H';
+        // record other at H
+        if (oH) {
+          ohgp++;
+        } else {
+          h = 0;
+        }
         // W case
-        if (parseInt10(fav[3]) > parseInt10(other[3])) {
+        if (favT > otherT) {
           let t = r / (Math.abs(parseInt10(fav[6]))/100);
           // t
           settings.amount += t;
@@ -83,7 +95,18 @@ fs.readdir(settings.dataDirectory, function(error, fileNames) {
             gw++;
           }
         }
-        // L or T case
+        // L case
+        else if (otherT > favT) {
+          // W for H other
+          if (oH) {
+            ohgw++;
+          }
+          // t
+          settings.amount += h * (parseInt10(other[6]) / 100);
+          // L
+          settings.amount -= r;
+        }
+        // T case
         else {
           // t
           settings.amount += h * (parseInt10(other[6]) / 100);
@@ -100,6 +123,8 @@ fs.readdir(settings.dataDirectory, function(error, fileNames) {
     settings.totalG = totalG;
     settings.gp = gp;
     settings.gw = gw;
+    settings.ohgp = ohgp;
+    settings.ohgw = ohgw;
     console.log(settings);
   });
 });
