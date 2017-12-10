@@ -4,7 +4,7 @@
 Percentage only
 No proportional
 Only H if O is at H
-Only B if fav is at H
+Not looking at ML S, but at each side's ML individually
 */
 
 const fs = require('fs');
@@ -23,8 +23,8 @@ var settings = {
   bThreshold: typeof nconf.get('bThreshold') === 'number' ? nconf.get('bThreshold') : 6500,
   hThreshold: typeof nconf.get('hThreshold') === 'number' ? nconf.get('hThreshold') : 1000,
   dataDirectory: nconf.get('dataDirectory') || 'data',
-  logYears: nconf.get('logYears') === 'true' ? true : false,
-  logDetails: nconf.get('logDetails') === 'true' ? true : false
+  logYears: nconf.get('logYears'),
+  logDetails: nconf.get('logDetails')
 };
 
 // @todo calculate prediction accuracy on each year
@@ -43,9 +43,6 @@ var lastD;
 // get file names
 fs.readdir(settings.dataDirectory, function(error, fileNames) {
   async.eachSeries(fileNames, function(fileName, callback) {
-    // if (fileName !== '07-08.csv') {
-    //   return callback(); // @test
-    // }
     if (fileName.indexOf('.') === 0) {
       return callback();
     }
@@ -62,27 +59,32 @@ fs.readdir(settings.dataDirectory, function(error, fileNames) {
         let t0 = lastLine.split(',');
         let t1 = line.split(',');
         if (settings.amount <= 0) {
-          return lineReader.close();
+          return;
         }
         let currentD = t0[0];
         let t0ml = parseInt10(t0[6]);
+        // sometimes the ML value is NaN or missing
+        if (isNaN(t0ml)) {
+          return;
+        }
         let t1ml = parseInt10(t1[6]);
-        let s = Math.abs(t0ml) + Math.abs(t1ml);
+
         let r = settings.amount * (settings.bpg * .01);
         let h = settings.amount * (settings.hpg * .01);
 
-        // sometimes the ML value is NaN or missing, skip
-        if (isNaN(t0ml)) {
-          r = 0;
-          h = 0;
-        }
+        let fav = t0ml <= 0 ? t0 : t1;
+        let other = t0ml > 0 ? t0 : t1;
+        let favMl = Math.abs(parseInt10(fav[6]));
+        let otherMl = parseInt10(other[6]);
 
         // b threshold
-        if (s < settings.bThreshold) {
+        if (favMl < settings.bThreshold) {
           r = 0;
+        } else {
+          gp++;
         }
         // h threshold
-        if (s >= settings.hThreshold) {
+        if (otherMl >= settings.hThreshold) {
           h = 0;
         }
         if (r || h) {
@@ -94,8 +96,6 @@ fs.readdir(settings.dataDirectory, function(error, fileNames) {
           }
         }
         // results
-        let fav = t0ml <= 0 ? t0 : t1;
-        let other = t0ml > 0 ? t0 : t1;
         let favT = parseInt10(fav[3]);
         let otherT = parseInt10(other[3]);
         let oH = other[2] === 'H';
@@ -105,19 +105,9 @@ fs.readdir(settings.dataDirectory, function(error, fileNames) {
         } else {
           h = 0;
         }
-        // only r if fav is H
-        if (fav[2] !== 'H') {
-          r = 0;
-        }
         // W case
         if (favT > otherT) {
           let t = r / (Math.abs(parseInt10(fav[6]))/100);
-          if (settings.logDetails && r) {
-            console.info("r", r); // @test
-            console.info("fav", fav); // @test
-            console.info("other", other); // @test
-            console.info("t", t); // @test
-          }
           // t
           if (settings.logDetails && t) {
             console.log(`W from B: ${t}`);
@@ -164,11 +154,7 @@ fs.readdir(settings.dataDirectory, function(error, fileNames) {
           settings.amount -= r;
           settings.sAmount -= r;
         }
-        if (r) {
-          gp++;
-        }
       }
-      //console.log(`incrementing to ${lineIndex + 1}`); // @test
       lineIndex++;
       lastLine = line;
     });

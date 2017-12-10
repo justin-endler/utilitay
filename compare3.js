@@ -9,13 +9,11 @@ var proportionalTrials = [];
 
 const amount = 100;
 const settings = {
-  bpg: [50] || _.range(1, amount),
-  hpg: [0] || _.range(0, amount),
-  bThresholds: _.range(4000, 7000, 10),
-  hThresholds: [130] ||  _.range(0, 300, 10)
+  bpg: _.range(1, 50),
+  hpg: [0] || _.range(10, 60),
+  bThresholds: [4000] || _.range(5000, 5550, 10),
+  hThresholds: _.range(10, 200, 10)
 };
-
-
 
 //settings.hpg = [0]; // @test temp, not totally sure, but H is not performing well
 
@@ -23,9 +21,9 @@ var hThresholds = settings.hThresholds;
 
 _.each(settings.bpg, bpg => {
   _.each(settings.hpg, hpg => {
-    // if (hpg >= bpg) {
-    //   return; // @test temporary, don't know if this is actually bad or not
-    // }
+    if (hpg >= bpg) {
+      return; // @test temporary, don't know if this is actually bad or not
+    }
     _.each(settings.bThresholds, bThreshold => {
       if (!hpg) {
         hThresholds = [0];
@@ -48,7 +46,7 @@ var index = 0;
 // total
 async.eachSeries(trials, (trial, callback) => {
   var analyze = spawn('node', [
-    'analyze2.js',
+    'analyze3.js',
     '--amount',
     100
   ].concat(trial.split(' ')));
@@ -56,6 +54,7 @@ async.eachSeries(trials, (trial, callback) => {
     data = toStr(data);
     var a = parseFloat((data.match(/amount:\s'([^']+)'/) || [0,0])[1]);
     if (a > max) {
+      //console.info("data", data); // @test
       console.log(`${trial} : ${a}`);
       max = a;
     } else if (a === max) {
